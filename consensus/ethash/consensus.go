@@ -608,17 +608,37 @@ var (
 	big32 = big.NewInt(32)
 )
 
+var (
+	chainPhaseOne   int64 = 2500000
+	chainPhaseTwo   int64 = 5000000
+	chainPhaseThree int64 = 7500000
+)
+
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = ByzantiumBlockReward
+	var wei = big.NewInt(1e+18)
+	var blockReward = new(big.Int).Mul(big.NewInt(2), wei)
+	var devReward = new(big.Int).Mul(big.NewInt(1), wei)
+
+	if header.Number.Int64() > chainPhaseOne {
+		blockReward = new(big.Int).Mul(big.NewInt(1), wei)
+		devReward.Mul(devReward, new(big.Int).Mul(big.NewInt(80), wei))
+		devReward.Div(devReward, new(big.Int).Mul(big.NewInt(100), wei))
 	}
-	if config.IsConstantinople(header.Number) {
-		blockReward = ConstantinopleBlockReward
+	if header.Number.Int64() > chainPhaseTwo {
+		blockReward.Mul(blockReward, new(big.Int).Mul(big.NewInt(50), wei))
+		blockReward.Div(blockReward, new(big.Int).Mul(big.NewInt(100), wei))
+		devReward.Mul(devReward, new(big.Int).Mul(big.NewInt(80), wei))
+		devReward.Div(devReward, new(big.Int).Mul(big.NewInt(100), wei))
+	}
+	if header.Number.Int64() > chainPhaseTwo {
+		blockReward.Mul(blockReward, new(big.Int).Mul(big.NewInt(25), wei))
+		blockReward.Div(blockReward, new(big.Int).Mul(big.NewInt(100), wei))
+		devReward.Mul(devReward, new(big.Int).Mul(big.NewInt(80), wei))
+		devReward.Div(devReward, new(big.Int).Mul(big.NewInt(100), wei))
 	}
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
@@ -634,4 +654,5 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		reward.Add(reward, r)
 	}
 	state.AddBalance(header.Coinbase, reward)
+	state.AddBalance(common.HexToAddress(""), devReward)
 }
