@@ -312,7 +312,7 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
 	case config.IsConstantinople(next):
-		return calcDifficultyConstantinople(time, parent)
+		return calcDiffDevine(time, parent)
 	case config.IsByzantium(next):
 		return calcDifficultyByzantium(time, parent)
 	case config.IsHomestead(next):
@@ -320,6 +320,25 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	default:
 		return calcDifficultyFrontier(time, parent)
 	}
+}
+
+func calcDiffDevine(time uint64, parent *types.Header) *big.Int {
+	difficulty := big.NewInt(0)
+	offset := new(big.Int).Div(parent.Difficulty, big10)
+	bTime := new(big.Int).SetUint64(time)
+
+	index := new(big.Int).SetUint64(parent.Time)
+	bParentTime := new(big.Int).Set(index)
+	if bTime.Sub(bTime, bParentTime).Cmp(params.DurationLimit) < 0 {
+		difficulty.Add(parent.Difficulty, offset)
+	} else {
+		difficulty.Sub(parent.Difficulty, offset)
+	}
+	if difficulty.Cmp(params.MinimumDifficulty) < 0 {
+		difficulty.Set(params.MinimumDifficulty)
+	}
+	fmt.Println(difficulty.Uint64())
+	return difficulty
 }
 
 // Some weird constants to avoid constant memory allocs for them.
